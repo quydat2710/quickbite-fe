@@ -2,7 +2,7 @@ import { useParams, NavLink } from 'react-router-dom'
 import { useState } from 'react'
 import {
   ArrowLeft, Star, Clock, MapPin, Phone, Share2,
-  Heart, Plus, ShoppingBasket, Check,
+  Heart, Plus, ShoppingBasket, Check, Store,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatPrice } from '@/lib/utils'
@@ -115,81 +115,110 @@ export default function RestaurantDetailPage() {
 
   const itemCount = getItemCount()
 
+  // Generate initials for logo placeholder
+  const initials = restaurant.name
+    .split(' ')
+    .slice(0, 2)
+    .map((w) => w[0])
+    .join('')
+    .toUpperCase()
+
   return (
-    <div className="page-enter min-h-screen bg-bg">
+    <div className="page-enter min-h-screen bg-gray-50">
       {/* Cover Image */}
-      <div className="relative h-[180px] md:h-[260px] overflow-hidden">
+      <div className="relative h-[200px] md:h-[280px] overflow-hidden">
         <img
           src={restaurant.coverImage}
           alt={restaurant.name}
           className="w-full h-full object-cover"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/15 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
 
         {/* Top actions */}
         <div className="absolute top-3 left-3 right-3 flex items-center justify-between z-10">
           <NavLink
             to="/"
-            className="h-9 w-9 rounded-lg glass-dark flex items-center justify-center hover:bg-black/50 transition-colors"
+            className="h-10 w-10 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center hover:bg-black/50 transition-colors"
           >
-            <ArrowLeft className="h-4.5 w-4.5 text-white" />
+            <ArrowLeft className="h-5 w-5 text-white" />
           </NavLink>
-          <div className="flex gap-1.5">
-            <button className="h-9 w-9 rounded-lg glass-dark flex items-center justify-center hover:bg-black/50 transition-colors">
-              <Share2 className="h-4 w-4 text-white" />
+          <div className="flex gap-2">
+            <button className="h-10 w-10 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center hover:bg-black/50 transition-colors">
+              <Share2 className="h-4.5 w-4.5 text-white" />
             </button>
             <button
               onClick={() => setLiked(!liked)}
-              className="h-9 w-9 rounded-lg glass-dark flex items-center justify-center hover:bg-black/50 transition-colors"
+              className="h-10 w-10 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center hover:bg-black/50 transition-colors"
             >
-              <Heart className={cn('h-4 w-4 transition-colors', liked ? 'fill-primary text-primary' : 'text-white')} />
+              <Heart className={cn('h-4.5 w-4.5 transition-colors', liked ? 'fill-red-500 text-red-500' : 'text-white')} />
             </button>
           </div>
         </div>
       </div>
 
       {/* Restaurant Info Card */}
-      <div className="container -mt-12 relative z-10">
-        <div className="bg-bg-white rounded-xl shadow-md p-4 md:p-5">
-          <div className="flex items-start justify-between gap-2.5">
+      <div className="container -mt-16 relative z-10">
+        <div className="bg-white rounded-2xl shadow-lg p-5 md:p-6 border border-gray-100/50">
+          <div className="flex items-start gap-4">
+            {/* Logo / Avatar */}
+            <div className="shrink-0">
+              {restaurant.logo ? (
+                <img
+                  src={restaurant.logo}
+                  alt={restaurant.name}
+                  className="h-14 w-14 md:h-16 md:w-16 rounded-xl object-cover border border-gray-100 shadow-sm"
+                />
+              ) : (
+                <div className="h-14 w-14 md:h-16 md:w-16 rounded-xl bg-gradient-to-br from-primary to-red-400 flex items-center justify-center shadow-sm">
+                  <span className="text-white text-lg md:text-xl font-bold">{initials}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Info */}
             <div className="flex-1 min-w-0">
-              <h1 className="text-lg md:text-xl font-bold line-clamp-1">{restaurant.name}</h1>
-              <p className="text-[13px] text-text-tertiary mt-0.5 line-clamp-2">{restaurant.description}</p>
-            </div>
-            <div className="flex items-center gap-0.5 bg-brand-accent-light px-2.5 py-1 rounded-lg shrink-0">
-              <Star className="h-3.5 w-3.5 text-brand-accent fill-brand-accent" />
-              <span className="text-[13px] font-bold text-brand-accent">{restaurant.rating.toFixed(1)}</span>
-            </div>
-          </div>
+              <div className="flex items-start justify-between gap-2">
+                <h1 className="text-lg md:text-xl font-extrabold text-gray-900 line-clamp-1 tracking-[-0.01em]">
+                  {restaurant.name}
+                </h1>
+                <div className="flex items-center gap-1 bg-amber-50 px-2.5 py-1 rounded-full shrink-0 border border-amber-100">
+                  <Star className="h-3.5 w-3.5 text-amber-400 fill-amber-400" />
+                  <span className="text-[13px] font-extrabold text-amber-600">{restaurant.rating.toFixed(1)}</span>
+                </div>
+              </div>
+              <p className="text-[13px] text-gray-500 mt-1 line-clamp-2 leading-relaxed">{restaurant.description}</p>
 
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 mt-3 text-[13px] text-text-secondary">
-            <div className="flex items-center gap-1">
-              <Clock className="h-3.5 w-3.5 text-text-tertiary" />
-              <span>{restaurant.deliveryTime}</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <MapPin className="h-3.5 w-3.5 text-text-tertiary" />
-              <span>{restaurant.distance}km</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <Phone className="h-3.5 w-3.5 text-text-tertiary" />
-              <span>{restaurant.phone}</span>
-            </div>
-          </div>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 mt-3 text-[13px] text-gray-400">
+                <div className="flex items-center gap-1">
+                  <Clock className="h-3.5 w-3.5" />
+                  <span className="font-medium">{restaurant.deliveryTime}</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <MapPin className="h-3.5 w-3.5" />
+                  <span className="font-medium">{restaurant.distance}km</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Phone className="h-3.5 w-3.5" />
+                  <span className="font-medium">{restaurant.phone}</span>
+                </div>
+              </div>
 
-          <div className="flex gap-1 mt-2.5">
-            {restaurant.categories.map((cat) => (
-              <span key={cat} className="text-[10px] px-2 py-0.5 bg-surface-active rounded-md text-text-secondary font-medium">
-                {cat}
-              </span>
-            ))}
+              {/* Category chips */}
+              <div className="flex gap-1.5 mt-3">
+                {restaurant.categories.map((cat) => (
+                  <span key={cat} className="text-[11px] px-2.5 py-1 bg-gray-50 border border-gray-100 rounded-full text-gray-500 font-semibold">
+                    {cat}
+                  </span>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="container mt-3">
-        <div className="flex border-b border-divider">
+      <div className="container mt-5">
+        <div className="flex gap-1 bg-gray-100 rounded-xl p-1">
           {[
             { id: 'menu', label: 'Thực đơn' },
             { id: 'reviews', label: `Đánh giá (${reviews.length})` },
@@ -199,58 +228,58 @@ export default function RestaurantDetailPage() {
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={cn(
-                'px-4 py-2.5 text-[13px] font-medium transition-all relative',
+                'flex-1 px-4 py-2.5 text-[13px] font-semibold transition-all rounded-lg',
                 activeTab === tab.id
-                  ? 'text-primary'
-                  : 'text-text-tertiary hover:text-text-secondary'
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700'
               )}
             >
               {tab.label}
-              {activeTab === tab.id && (
-                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-full" />
-              )}
             </button>
           ))}
         </div>
       </div>
 
       {/* Tab Content */}
-      <div className="container py-4 pb-28">
+      <div className="container py-5 pb-28">
         {/* Menu Tab */}
         {activeTab === 'menu' && (
-          <div className="space-y-5">
+          <div className="space-y-6">
             {Object.entries(menuCategories).map(([catName, items]) => (
               <div key={catName}>
-                <h3 className="font-semibold text-[14px] text-text-primary mb-2.5">{catName}</h3>
-                <div className="space-y-2">
+                <h3 className="font-bold text-base text-gray-900 mb-3 flex items-center gap-2">
+                  <Store className="h-4 w-4 text-primary" />
+                  {catName}
+                </h3>
+                <div className="space-y-2.5">
                   {items.map((item) => (
                     <button
                       key={item.id}
                       onClick={() => item.isAvailable && openItemModal(item)}
                       disabled={!item.isAvailable}
                       className={cn(
-                        'w-full flex gap-3 p-3 bg-bg-white rounded-xl text-left transition-all duration-200',
+                        'w-full flex gap-4 p-4 bg-white rounded-xl text-left transition-all duration-200 border border-gray-100/60',
                         item.isAvailable
-                          ? 'hover:shadow-sm hover:-translate-y-0.5 cursor-pointer'
+                          ? 'hover:shadow-md hover:-translate-y-0.5 hover:border-gray-200 cursor-pointer'
                           : 'opacity-50 cursor-not-allowed'
                       )}
                     >
                       <div className="flex-1 min-w-0">
-                        <h4 className="font-semibold text-[13px] text-text-primary line-clamp-1">{item.name}</h4>
-                        <p className="text-[11px] text-text-tertiary mt-0.5 line-clamp-2">{item.description}</p>
-                        <div className="flex items-center gap-2.5 mt-1.5">
-                          <span className="text-[13px] font-bold text-primary">{formatPrice(item.basePrice)}</span>
-                          <span className="text-[10px] text-text-disabled">Đã bán {item.totalSold}</span>
+                        <h4 className="font-bold text-[14px] text-gray-900 line-clamp-1">{item.name}</h4>
+                        <p className="text-[12px] text-gray-400 mt-1 line-clamp-2 leading-relaxed">{item.description}</p>
+                        <div className="flex items-center gap-3 mt-2.5">
+                          <span className="text-[14px] font-extrabold text-primary">{formatPrice(item.basePrice)}</span>
+                          <span className="text-[11px] text-gray-300 font-medium">Đã bán {item.totalSold}</span>
                         </div>
                         {!item.isAvailable && (
-                          <span className="inline-block mt-1 text-[10px] font-medium text-error bg-error-bg px-1.5 py-0.5 rounded-md">Hết món</span>
+                          <span className="inline-block mt-1.5 text-[11px] font-bold text-red-500 bg-red-50 px-2 py-0.5 rounded-full">Hết món</span>
                         )}
                       </div>
-                      <div className="relative h-16 w-16 rounded-lg overflow-hidden bg-surface-active shrink-0">
+                      <div className="relative h-20 w-20 rounded-xl overflow-hidden bg-gray-100 shrink-0">
                         <img src={item.image} alt={item.name} className="h-full w-full object-cover" />
                         {item.isAvailable && (
-                          <div className="absolute -bottom-0.5 -right-0.5 h-6 w-6 bg-primary rounded-md flex items-center justify-center shadow-sm">
-                            <Plus className="h-3.5 w-3.5 text-white" />
+                          <div className="absolute -bottom-0.5 -right-0.5 h-7 w-7 bg-primary rounded-tl-xl rounded-br-xl flex items-center justify-center shadow-sm">
+                            <Plus className="h-4 w-4 text-white" />
                           </div>
                         )}
                       </div>
@@ -266,34 +295,34 @@ export default function RestaurantDetailPage() {
         {activeTab === 'reviews' && (
           <div className="space-y-3">
             {reviews.length === 0 ? (
-              <div className="text-center py-10">
-                <Star className="h-8 w-8 text-text-disabled mx-auto mb-2" />
-                <p className="text-text-tertiary text-[13px]">Chưa có đánh giá nào</p>
+              <div className="text-center py-12">
+                <Star className="h-10 w-10 text-gray-200 mx-auto mb-3" />
+                <p className="text-gray-400 text-[14px] font-medium">Chưa có đánh giá nào</p>
               </div>
             ) : (
               reviews.map((review) => (
-                <div key={review.id} className="bg-bg-white rounded-xl p-3.5">
+                <div key={review.id} className="bg-white rounded-xl p-4 border border-gray-100/60">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2.5">
-                      <div className="h-8 w-8 rounded-full bg-gradient-to-br from-primary to-brand-accent flex items-center justify-center text-white text-[11px] font-bold">
+                    <div className="flex items-center gap-3">
+                      <div className="h-9 w-9 rounded-full bg-gradient-to-br from-primary to-red-400 flex items-center justify-center text-white text-[12px] font-bold">
                         {review.customerName[0]}
                       </div>
                       <div>
-                        <p className="text-[13px] font-semibold text-text-primary">{review.customerName}</p>
-                        <p className="text-[10px] text-text-tertiary">{review.createdAt}</p>
+                        <p className="text-[14px] font-bold text-gray-900">{review.customerName}</p>
+                        <p className="text-[11px] text-gray-400">{review.createdAt}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-0.5">
                       {Array.from({ length: 5 }).map((_, i) => (
-                        <Star key={i} className={cn('h-3 w-3', i < review.rating ? 'text-brand-accent fill-brand-accent' : 'text-text-disabled')} />
+                        <Star key={i} className={cn('h-3.5 w-3.5', i < review.rating ? 'text-amber-400 fill-amber-400' : 'text-gray-200')} />
                       ))}
                     </div>
                   </div>
-                  <p className="text-[13px] text-text-secondary mt-2.5">{review.comment}</p>
+                  <p className="text-[13px] text-gray-600 mt-3 leading-relaxed">{review.comment}</p>
                   {review.reply && (
-                    <div className="mt-2.5 pl-3 border-l-2 border-primary/20">
-                      <p className="text-[11px] font-medium text-primary mb-0.5">Phản hồi từ nhà hàng</p>
-                      <p className="text-[13px] text-text-secondary">{review.reply}</p>
+                    <div className="mt-3 pl-3 border-l-2 border-primary/20 bg-primary/[0.03] rounded-r-lg py-2 pr-3">
+                      <p className="text-[11px] font-bold text-primary mb-0.5">Phản hồi từ nhà hàng</p>
+                      <p className="text-[13px] text-gray-600">{review.reply}</p>
                     </div>
                   )}
                 </div>
@@ -304,22 +333,25 @@ export default function RestaurantDetailPage() {
 
         {/* Info Tab */}
         {activeTab === 'info' && (
-          <div className="bg-bg-white rounded-xl p-4 space-y-3">
-            <div>
-              <p className="text-[11px] font-semibold text-text-tertiary uppercase tracking-wider mb-0.5">Địa chỉ</p>
-              <p className="text-[13px] text-text-primary">{restaurant.address}</p>
-            </div>
-            <div>
-              <p className="text-[11px] font-semibold text-text-tertiary uppercase tracking-wider mb-0.5">Giờ mở cửa</p>
-              <p className="text-[13px] text-text-primary">{restaurant.openTime} - {restaurant.closeTime}</p>
-            </div>
-            <div>
-              <p className="text-[11px] font-semibold text-text-tertiary uppercase tracking-wider mb-0.5">Điện thoại</p>
-              <p className="text-[13px] text-text-primary">{restaurant.phone}</p>
-            </div>
-            <div>
-              <p className="text-[11px] font-semibold text-text-tertiary uppercase tracking-wider mb-0.5">Mô tả</p>
-              <p className="text-[13px] text-text-secondary leading-relaxed">{restaurant.description}</p>
+          <div className="bg-white rounded-xl p-5 space-y-4 border border-gray-100/60">
+            {[
+              { label: 'Địa chỉ', value: restaurant.address, icon: MapPin },
+              { label: 'Giờ mở cửa', value: `${restaurant.openTime} - ${restaurant.closeTime}`, icon: Clock },
+              { label: 'Điện thoại', value: restaurant.phone, icon: Phone },
+            ].map(({ label, value, icon: Icon }) => (
+              <div key={label} className="flex items-start gap-3">
+                <div className="h-9 w-9 rounded-lg bg-gray-50 flex items-center justify-center shrink-0">
+                  <Icon className="h-4 w-4 text-gray-400" />
+                </div>
+                <div>
+                  <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">{label}</p>
+                  <p className="text-[14px] text-gray-700 font-medium mt-0.5">{value}</p>
+                </div>
+              </div>
+            ))}
+            <div className="pt-3 border-t border-gray-100">
+              <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Mô tả</p>
+              <p className="text-[13px] text-gray-500 leading-relaxed">{restaurant.description}</p>
             </div>
           </div>
         )}
@@ -327,18 +359,18 @@ export default function RestaurantDetailPage() {
 
       {/* Floating Cart Bar */}
       {itemCount > 0 && cartRestaurantId === restaurant.id && (
-        <div className="fixed bottom-16 md:bottom-4 left-3 right-3 md:left-auto md:right-4 md:w-[360px] z-40">
+        <div className="fixed bottom-16 md:bottom-4 left-3 right-3 md:left-auto md:right-4 md:w-[380px] z-40">
           <NavLink
             to="/cart"
-            className="bg-primary text-text-inverse rounded-xl px-4 py-3 shadow-lg flex items-center justify-between hover:bg-primary-hover transition-all active:scale-[0.98] animate-slide-up"
+            className="bg-primary text-white rounded-2xl px-5 py-3.5 shadow-xl flex items-center justify-between hover:bg-primary-hover transition-all active:scale-[0.98] animate-slide-up border border-white/10"
           >
-            <div className="flex items-center gap-2.5">
-              <div className="h-8 w-8 bg-white/20 rounded-lg flex items-center justify-center">
-                <ShoppingBasket className="h-4 w-4" />
+            <div className="flex items-center gap-3">
+              <div className="h-9 w-9 bg-white/20 rounded-xl flex items-center justify-center">
+                <ShoppingBasket className="h-4.5 w-4.5" />
               </div>
-              <span className="font-semibold text-[13px]">{itemCount} món trong giỏ</span>
+              <span className="font-bold text-[14px]">{itemCount} món trong giỏ</span>
             </div>
-            <span className="text-[13px] font-bold bg-white/20 px-3 py-1.5 rounded-lg">Xem giỏ</span>
+            <span className="text-[13px] font-bold bg-white/20 px-3.5 py-1.5 rounded-xl">Xem giỏ</span>
           </NavLink>
         </div>
       )}
@@ -352,25 +384,25 @@ export default function RestaurantDetailPage() {
         {selectedItem && (
           <div className="space-y-4">
             {/* Item Image */}
-            <div className="relative h-40 rounded-lg overflow-hidden bg-surface-active -mx-1">
+            <div className="relative h-44 rounded-xl overflow-hidden bg-gray-100 -mx-1">
               <img src={selectedItem.image} alt={selectedItem.name} className="w-full h-full object-cover" />
             </div>
 
             <div>
-              <p className="text-[13px] text-text-secondary">{selectedItem.description}</p>
-              <p className="text-base font-bold text-primary mt-1">{formatPrice(selectedItem.basePrice)}</p>
+              <p className="text-[13px] text-gray-500 leading-relaxed">{selectedItem.description}</p>
+              <p className="text-lg font-extrabold text-primary mt-1.5">{formatPrice(selectedItem.basePrice)}</p>
             </div>
 
             {/* Option Groups */}
             {selectedItem.optionGroups.map((og) => (
               <div key={og.id}>
-                <div className="flex items-center justify-between mb-1.5">
-                  <h4 className="text-[13px] font-semibold">{og.name}</h4>
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-[14px] font-bold text-gray-900">{og.name}</h4>
                   {og.required && (
-                    <span className="text-[9px] font-bold text-primary bg-primary-light px-1.5 py-0.5 rounded-md">Bắt buộc</span>
+                    <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full">Bắt buộc</span>
                   )}
                 </div>
-                <div className="space-y-1.5">
+                <div className="space-y-2">
                   {og.options.map((opt) => {
                     const isSelected = (selectedOptions[og.id] || []).includes(opt.id)
                     return (
@@ -378,23 +410,23 @@ export default function RestaurantDetailPage() {
                         key={opt.id}
                         onClick={() => toggleOption(og, opt.id)}
                         className={cn(
-                          'w-full flex items-center justify-between p-2.5 rounded-lg border transition-all',
+                          'w-full flex items-center justify-between p-3 rounded-xl border-2 transition-all',
                           isSelected
-                            ? 'border-primary bg-primary-light'
-                            : 'border-border hover:border-border-hover'
+                            ? 'border-primary bg-primary/5'
+                            : 'border-gray-100 hover:border-gray-200'
                         )}
                       >
-                        <div className="flex items-center gap-2.5">
+                        <div className="flex items-center gap-3">
                           <div className={cn(
-                            'h-4 w-4 rounded-full border-2 flex items-center justify-center transition-colors',
-                            isSelected ? 'border-primary bg-primary' : 'border-border'
+                            'h-5 w-5 rounded-full border-2 flex items-center justify-center transition-colors',
+                            isSelected ? 'border-primary bg-primary' : 'border-gray-300'
                           )}>
-                            {isSelected && <Check className="h-2.5 w-2.5 text-white" />}
+                            {isSelected && <Check className="h-3 w-3 text-white" />}
                           </div>
-                          <span className="text-[13px] font-medium">{opt.name}</span>
+                          <span className="text-[14px] font-medium text-gray-700">{opt.name}</span>
                         </div>
                         {opt.extraPrice > 0 && (
-                          <span className="text-[13px] text-text-tertiary">+{formatPrice(opt.extraPrice)}</span>
+                          <span className="text-[13px] text-gray-400 font-medium">+{formatPrice(opt.extraPrice)}</span>
                         )}
                       </button>
                     )
@@ -405,22 +437,22 @@ export default function RestaurantDetailPage() {
 
             {/* Notes */}
             <div>
-              <label className="text-[13px] font-semibold text-text-primary mb-1.5 block">Ghi chú</label>
+              <label className="text-[14px] font-bold text-gray-900 mb-2 block">Ghi chú</label>
               <textarea
                 value={itemNotes}
                 onChange={(e) => setItemNotes(e.target.value)}
                 placeholder="Ít cay, không hành..."
-                className="w-full p-2.5 text-[13px] bg-surface-active border-none rounded-lg placeholder:text-text-disabled focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
+                className="w-full p-3 text-[14px] bg-gray-50 border border-gray-200 rounded-xl placeholder:text-gray-300 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 resize-none transition-all"
                 rows={2}
               />
             </div>
 
             {/* Quantity & Add */}
-            <div className="flex items-center justify-between pt-2 border-t border-divider">
+            <div className="flex items-center justify-between pt-3 border-t border-gray-100">
               <QuantityStepper value={itemQuantity} onChange={setItemQuantity} min={1} />
-              <Button onClick={handleAddToCart} size="md" className="gap-1.5 min-w-[150px]">
-                <span>Thêm</span>
-                <span className="bg-white/20 px-2 py-0.5 rounded-md text-[11px]">{formatPrice(getItemTotalPrice())}</span>
+              <Button onClick={handleAddToCart} size="md" className="gap-2 min-w-[160px] rounded-xl">
+                <span className="font-bold">Thêm</span>
+                <span className="bg-white/20 px-2.5 py-0.5 rounded-lg text-[12px] font-bold">{formatPrice(getItemTotalPrice())}</span>
               </Button>
             </div>
           </div>

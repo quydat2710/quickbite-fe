@@ -37,9 +37,9 @@
   --color-divider: #F3F4F6;
   --color-text-primary: #0F172A;
   --color-text-secondary: #475569;
-  --color-text-tertiary: #94A3B8;
+  --color-text-tertiary: #64748B;
   --color-text-inverse: #FFFFFF;
-  --color-text-disabled: #CBD5E1;
+  --color-text-disabled: #94A3B8;
   --color-overlay: rgba(0, 0, 0, 0.5);
 
   /* ── Spacing ── */
@@ -71,7 +71,7 @@
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
   --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
-  --shadow-focus: 0 0 0 3px rgba(220, 38, 38, 0.15);
+  --shadow-focus: 0 0 0 3px rgba(220, 38, 38, 0.25);
   --shadow-card-hover: 0 12px 28px -6px rgba(0, 0, 0, 0.12), 0 4px 8px -4px rgba(0, 0, 0, 0.06);
 }
 
@@ -347,7 +347,8 @@ input::placeholder,
 textarea::placeholder {
   font-family: 'Inter', system-ui, sans-serif !important;
   font-weight: 400;
-  opacity: 0.5;
+  color: var(--color-text-tertiary);
+  opacity: 0.85;
 }
 
 /* ============================================
@@ -432,6 +433,45 @@ textarea::placeholder {
 
 .animate-fade-in {
   animation: fadeIn 0.25s ease-out;
+}
+
+/* ── Search Overlay Animations ── */
+.search-overlay-backdrop {
+  animation: fadeIn 0.15s ease-out both;
+}
+
+.search-overlay-modal {
+  animation: overlayScaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.search-overlay-mobile {
+  animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes overlayScaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.search-loading-bar {
+  animation: searchLoadingSlide 1s ease-in-out infinite;
+}
+
+@keyframes searchLoadingSlide {
+  0% {
+    transform: translateX(-100%);
+  }
+
+  100% {
+    transform: translateX(400%);
+  }
 }
 
 .animate-float {

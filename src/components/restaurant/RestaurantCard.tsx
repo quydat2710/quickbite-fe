@@ -102,7 +102,7 @@ export function RestaurantCard({
         {/* ─ Rating badge (desktop) ─ */}
         <div className="hidden md:flex absolute bottom-3 right-3 z-10 bg-white/95 backdrop-blur-md px-2.5 py-[5px] rounded-full items-center gap-1 shadow-sm border border-white/20">
           <Star className="h-3.5 w-3.5 text-amber-400 fill-amber-400" />
-          <span className="text-[12px] font-extrabold text-gray-800 leading-none mt-[1px]">{rating.toFixed(1)}</span>
+          <span className="text-[12px] font-extrabold text-gray-800 leading-none mt-[1px]">{Number(rating || 0).toFixed(1)}</span>
         </div>
 
         {/* ─ Closed overlay ─ */}
@@ -128,7 +128,7 @@ export function RestaurantCard({
           <div className="flex items-center gap-2 text-[12px] text-gray-400 font-medium">
             <div className="flex items-center gap-1">
               <Star className="h-3.5 w-3.5 text-amber-400 fill-amber-400" />
-              <span className="font-bold text-gray-700">{rating.toFixed(1)}</span>
+              <span className="font-bold text-gray-700">{Number(rating || 0).toFixed(1)}</span>
             </div>
             <span className="text-gray-200">|</span>
             <div className="flex items-center gap-1">
@@ -165,7 +165,7 @@ export function RestaurantCard({
               <span>{formatDistance(distance)}</span>
             </div>
             <span className="text-gray-200">|</span>
-            <span>{totalOrders.toLocaleString()}+ đơn</span>
+            <span style={{ whiteSpace: 'nowrap' }}>{Number(totalOrders || 0).toLocaleString()}+ đơn</span>
           </div>
 
           {/* Category chips */}

@@ -1,5 +1,6 @@
-import { MapPin, Bell, ChevronDown, Search } from 'lucide-react'
+import { MapPin, Bell, ChevronDown, Search, Loader2 } from 'lucide-react'
 import { useSearch } from '@/providers/SearchProvider'
+import { useLocationStore } from '@/stores'
 
 /**
  * Mobile-only header for the Home page.
@@ -8,6 +9,7 @@ import { useSearch } from '@/providers/SearchProvider'
  */
 export function MobileHomeHeader() {
   const { openSearch } = useSearch()
+  const { displayAddress, isLoading: isLocationLoading, detectCurrentLocation } = useLocationStore()
 
   return (
     <header className="md:hidden bg-white px-4 pt-4 pb-4 border-b border-black/[0.06] shadow-sm">
@@ -21,10 +23,14 @@ export function MobileHomeHeader() {
               <span className="text-primary">Quick</span>
               <span className="text-brand-accent">Bite</span>
             </span>
-            <button className="flex items-center gap-0.5 text-[11px] text-text-secondary font-medium mt-0.5 leading-none">
-              <MapPin className="h-3 w-3 text-primary shrink-0" />
-              <span>227 Nguyễn Văn Cừ, Q.5</span>
-              <ChevronDown className="h-3 w-3 text-text-tertiary" />
+            <button onClick={() => detectCurrentLocation()} className="flex items-center gap-0.5 text-[11px] text-text-secondary font-medium mt-0.5 leading-none max-w-[200px]">
+              {isLocationLoading ? (
+                <Loader2 className="h-3 w-3 text-primary shrink-0 animate-spin" />
+              ) : (
+                <MapPin className="h-3 w-3 text-primary shrink-0" />
+              )}
+              <span className="truncate">{displayAddress}</span>
+              <ChevronDown className="h-3 w-3 text-text-tertiary shrink-0" />
             </button>
           </div>
         </div>

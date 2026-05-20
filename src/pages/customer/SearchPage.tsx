@@ -1,6 +1,5 @@
 // ── Search Results Page ──
-// Results-only page: /search?q=keyword
-// Empty state when no query (deep-linkable, SEO-friendly)
+// Uses real restaurant API: /search?q=keyword
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useSearchParams } from 'react-router-dom'
@@ -8,8 +7,7 @@ import { RestaurantCard } from '@/components/restaurant/RestaurantCard'
 import { Search, SlidersHorizontal, X, Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useSearch } from '@/providers/SearchProvider'
-import { searchService } from '@/services/search.service'
-import type { SearchResult, SearchFilters } from '@/types/search.types'
+import { restaurantApi } from '@/services/api'
 
 const FILTER_OPTIONS = [
   { key: 'nearest', label: 'Gần nhất' },
@@ -24,14 +22,14 @@ export default function SearchPage() {
   const queryFromUrl = searchParams.get('q') || ''
   const { openSearch } = useSearch()
 
-  const [results, setResults] = useState<SearchResult[]>([])
+  const [results, setResults] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [activeFilter, setActiveFilter] = useState<string | null>(null)
   const [editableQuery, setEditableQuery] = useState(queryFromUrl)
   const abortRef = useRef<AbortController | null>(null)
 
-  // ── Fetch results when URL query changes ──
-  const fetchResults = useCallback(async (q: string, filter?: string) => {
+  // ── Fetch results from real API ──
+  const fetchResults = useCallback(async (q: string) => {
     if (!q.trim()) {
       setResults([])
       return
@@ -44,16 +42,26 @@ export default function SearchPage() {
 
     setIsLoading(true)
     try {
-      const filters: SearchFilters = {}
-      if (filter === 'nearest') filters.sortBy = 'nearest'
-      else if (filter === 'rating') filters.sortBy = 'rating'
-      else if (filter === 'fastest') filters.sortBy = 'fastest'
-      else if (filter === 'cheapest') filters.sortBy = 'cheapest'
-      else if (filter === 'open') filters.isOpen = true
+      const data = await restaurantApi.search({
+        keyword: q,
+        limit: 20,
+      })
 
-      const data = await searchService.searchResults(q, filters, controller.signal)
       if (!controller.signal.aborted) {
-        setResults(data)
+        const items = data.data || []
+        // Map to RestaurantCard props
+        const mapped = items.map((r: any) => ({
+          id: r.id,
+          name: r.name,
+          coverImage: r.coverImage || 'https://images.unsplash.com/photo-1555126634-323283e090fa?w=600&h=380&fit=crop',
+          rating: r.rating || 0,
+          totalOrders: r.reviewCount || 0,
+          categories: r.tags || [r.category].filter(Boolean),
+          distance: 0,
+          deliveryTime: r.deliveryTime || '20-30 phút',
+          isOnline: r.isOnline ?? true,
+        }))
+        setResults(mapped)
         setIsLoading(false)
       }
     } catch (err) {
@@ -66,8 +74,8 @@ export default function SearchPage() {
   // React to URL changes
   useEffect(() => {
     setEditableQuery(queryFromUrl)
-    fetchResults(queryFromUrl, activeFilter ?? undefined)
-  }, [queryFromUrl, fetchResults, activeFilter])
+    fetchResults(queryFromUrl)
+  }, [queryFromUrl, fetchResults])
 
   // ── Handle search submit from inline input ──
   const handleSubmit = (e: React.FormEvent) => {

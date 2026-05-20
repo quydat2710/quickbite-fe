@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { NavLink, Link, useNavigate } from 'react-router-dom'
-import { Search, ShoppingBasket, ClipboardList, User, Bell, MapPin, ChevronDown, Heart, Home } from 'lucide-react'
+import { Search, ShoppingBasket, ClipboardList, User, Bell, MapPin, ChevronDown, Heart, Home, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useAuthStore, useCartStore } from '@/stores'
+import { useAuthStore, useCartStore, useLocationStore } from '@/stores'
 import { useSearch } from '@/providers/SearchProvider'
 
 const desktopNavItems = [
@@ -20,6 +20,7 @@ export function CustomerHeader({ isScrolled }: CustomerHeaderProps) {
   const navigate = useNavigate()
   const { user, isAuthenticated } = useAuthStore()
   const { openSearch } = useSearch()
+  const { displayAddress, isLoading: isLocationLoading, detectCurrentLocation } = useLocationStore()
   
   // Sliding hover state
   const [hoverStyle, setHoverStyle] = useState({ left: 0, top: 0, width: 0, height: 0, opacity: 0 })
@@ -48,10 +49,18 @@ export function CustomerHeader({ isScrolled }: CustomerHeaderProps) {
             </span>
           </NavLink>
 
-          <button className="hidden md:flex items-center gap-1.5 text-[13px] text-text-secondary font-medium hover:text-text-primary transition-colors">
-            <MapPin className="h-4 w-4 text-primary shrink-0" />
-            <span>227 Nguyễn Văn Cừ, Q.5</span>
-            <ChevronDown className="h-3.5 w-3.5 text-text-tertiary" />
+          <button
+            onClick={() => detectCurrentLocation()}
+            className="hidden md:flex items-center gap-1.5 text-[13px] text-text-secondary font-medium hover:text-text-primary transition-colors max-w-[240px]"
+            title="Nhấn để cập nhật vị trí"
+          >
+            {isLocationLoading ? (
+              <Loader2 className="h-4 w-4 text-primary shrink-0 animate-spin" />
+            ) : (
+              <MapPin className="h-4 w-4 text-primary shrink-0" />
+            )}
+            <span className="truncate">{displayAddress}</span>
+            <ChevronDown className="h-3.5 w-3.5 text-text-tertiary shrink-0" />
           </button>
         </div>
 
@@ -138,12 +147,28 @@ export function CustomerHeader({ isScrolled }: CustomerHeaderProps) {
               {/* Avatar / User Pill */}
               <NavLink
                 to="/profile"
-                className="ml-2 flex items-center gap-2 p-1 pr-3.5 rounded-full border border-border/80 bg-white hover:bg-surface-active hover:shadow-sm hover:border-border transition-all duration-200"
+                className="ml-2 flex items-center gap-2 p-1 pr-3.5 rounded-full border border-border/80 bg-white hover:bg-surface-active hover:shadow-md hover:border-brand-accent/20 transition-all duration-300 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] group"
               >
-                <div className="h-8 w-8 rounded-full bg-gradient-to-br from-primary to-orange-500 flex items-center justify-center text-white text-[13px] font-bold shadow-sm">
-                  {user?.fullName?.charAt(0)?.toUpperCase() || 'U'}
+                <div 
+                  className="h-8 w-8 rounded-full flex items-center justify-center overflow-hidden shrink-0 border border-black/[0.06] ring-2 ring-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] bg-slate-50 transition-all duration-300"
+                  style={{
+                    background: 'linear-gradient(135deg, #DC2626, #EA580C)',
+                    color: '#ffffff',
+                  }}
+                >
+                  {user?.avatarUrl ? (
+                    <img 
+                      src={user.avatarUrl} 
+                      alt="" 
+                      className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-110"
+                    />
+                  ) : (
+                    <span className="text-[13px] font-bold text-white transition-transform duration-300 group-hover:scale-110">
+                      {user?.fullName?.charAt(0)?.toUpperCase() || 'U'}
+                    </span>
+                  )}
                 </div>
-                <span className="text-[13px] font-semibold text-text-primary max-w-[100px] truncate">
+                <span className="text-[13px] font-semibold text-text-primary max-w-[100px] truncate transition-colors duration-300 group-hover:text-primary">
                   {user?.fullName || 'Người dùng'}
                 </span>
               </NavLink>

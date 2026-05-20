@@ -4,6 +4,7 @@ import { useCartStore } from '@/stores'
 import { formatPrice } from '@/lib/utils'
 import { QuantityStepper } from '@/components/ui/QuantityStepper'
 import { Button } from '@/components/ui/Button'
+import { useEffect } from 'react'
 
 export default function CartPage() {
   const navigate = useNavigate()
@@ -11,6 +12,20 @@ export default function CartPage() {
   const subtotal = getSubtotal()
   const deliveryFee = subtotal > 0 ? 15000 + Math.floor(Math.random() * 10000) : 0
   const total = subtotal + deliveryFee
+
+  // Responsive 2-col layout without Tailwind grid classes
+  useEffect(() => {
+    const grid = document.getElementById('cart-grid')
+    if (!grid) return
+    const update = () => {
+      grid.style.gridTemplateColumns = window.innerWidth >= 1024
+        ? 'minmax(0, 2fr) minmax(0, 1fr)'
+        : 'minmax(0, 1fr)'
+    }
+    update()
+    window.addEventListener('resize', update)
+    return () => window.removeEventListener('resize', update)
+  }, [])
 
   if (items.length === 0) {
     return (
@@ -60,10 +75,10 @@ export default function CartPage() {
         </div>
       </div>
 
-      <div className="container py-4 pb-36 md:pb-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 content-wide">
+      <div style={{ maxWidth: 1120, margin: '0 auto', padding: '16px 20px 144px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,2fr)', gap: 16 }} id="cart-grid">
           {/* Cart Items */}
-          <div className="lg:col-span-2 space-y-2">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {items.map((item) => {
               const optionsExtra = item.options.reduce((s, o) => s + o.extraPrice, 0)
               const itemTotal = (item.unitPrice + optionsExtra) * item.quantity
@@ -112,8 +127,8 @@ export default function CartPage() {
           </div>
 
           {/* Order Summary */}
-          <div className="lg:col-span-1">
-            <div className="bg-bg-white rounded-xl p-4 lg:sticky lg:top-20">
+          <div id="cart-summary">
+            <div style={{ background: '#fff', borderRadius: 16, padding: 20, position: 'sticky', top: 88 }}>
               <h3 className="font-semibold text-[14px] mb-3">Tổng đơn hàng</h3>
 
               <div className="space-y-2.5 text-[13px]">

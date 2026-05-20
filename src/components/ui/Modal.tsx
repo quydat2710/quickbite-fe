@@ -11,8 +11,15 @@ interface ModalProps {
   size?: 'sm' | 'md' | 'lg'
 }
 
+const SIZE_MAP = {
+  sm: 480,
+  md: 560,
+  lg: 720,
+}
+
 export function Modal({ isOpen, onClose, title, children, className, size = 'md' }: ModalProps) {
   const overlayRef = useRef<HTMLDivElement>(null)
+  const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 768
 
   useEffect(() => {
     if (isOpen) {
@@ -35,48 +42,97 @@ export function Modal({ isOpen, onClose, title, children, className, size = 'md'
 
   if (!isOpen) return null
 
-  const sizeClasses = {
-    sm: 'max-w-sm',
-    md: 'max-w-lg',
-    lg: 'max-w-2xl',
-  }
+  const maxW = SIZE_MAP[size]
+  const vw = typeof window !== 'undefined' ? window.innerWidth : 1280
+  const mobile = vw < 768
 
   return (
     <div
       ref={overlayRef}
-      className="fixed inset-0 z-[100] flex items-end md:items-center justify-center p-0 md:p-4"
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 9999,
+        display: 'flex',
+        alignItems: mobile ? 'flex-end' : 'center',
+        justifyContent: 'center',
+        padding: mobile ? '0' : '16px',
+      }}
       onClick={(e) => { if (e.target === overlayRef.current) onClose() }}
     >
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/50 animate-fade-in" />
-
-      {/* Content — Bottom sheet on mobile, centered modal on desktop */}
       <div
-        className={cn(
-          'relative w-full bg-white shadow-2xl z-10',
-          'rounded-t-2xl md:rounded-2xl',
-          'max-h-[90vh] md:max-h-[85vh]',
-          'flex flex-col',
-          'animate-slide-up md:animate-fade-in',
-          sizeClasses[size],
-          className
-        )}
+        className="animate-fade-in"
+        style={{
+          position: 'absolute',
+          inset: 0,
+          background: 'rgba(0,0,0,0.55)',
+        }}
+      />
+
+      {/* Modal Panel */}
+      <div
+        className={cn('animate-slide-up', className)}
+        style={{
+          position: 'relative',
+          zIndex: 10,
+          background: '#fff',
+          width: mobile ? '100%' : `min(${maxW}px, calc(100vw - 32px))`,
+          maxWidth: mobile ? '100%' : maxW,
+          maxHeight: mobile ? '92dvh' : '85vh',
+          display: 'flex',
+          flexDirection: 'column',
+          borderRadius: mobile ? '24px 24px 0 0' : '20px',
+          boxShadow: '0 25px 60px rgba(0,0,0,0.2)',
+          overflow: 'hidden',
+        }}
       >
+        {/* Drag handle on mobile */}
+        {mobile && (
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 4px' }}>
+            <div style={{ width: 40, height: 4, borderRadius: 9999, background: '#e5e7eb' }} />
+          </div>
+        )}
+
         {/* Header */}
         {title && (
-          <div className="shrink-0 flex items-center justify-between px-5 py-4 border-b border-gray-100">
-            <h3 className="font-bold text-gray-900 text-base">{title}</h3>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '16px 20px',
+            borderBottom: '1px solid #f3f4f6',
+            flexShrink: 0,
+          }}>
+            <h3 style={{ fontWeight: 700, color: '#111827', fontSize: 16, margin: 0 }}>{title}</h3>
             <button
               onClick={onClose}
-              className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+              style={{
+                padding: 6,
+                borderRadius: 8,
+                border: 'none',
+                background: 'transparent',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'background 0.15s',
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = '#f3f4f6')}
+              onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
             >
-              <X className="h-5 w-5 text-gray-400" />
+              <X style={{ width: 20, height: 20, color: '#9ca3af' }} />
             </button>
           </div>
         )}
 
         {/* Body — scrollable */}
-        <div className="flex-1 overflow-y-auto overscroll-contain px-5 py-4">
+        <div style={{
+          flex: 1,
+          overflowY: 'auto',
+          padding: '20px',
+          WebkitOverflowScrolling: 'touch',
+        }}>
           {children}
         </div>
       </div>

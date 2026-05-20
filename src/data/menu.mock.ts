@@ -141,6 +141,60 @@ export const mockMenuItems: Record<string, MenuItem[]> = {
       optionGroups: [],
     },
   ],
+  '5': [
+    {
+      id: 'm8',
+      categoryName: 'Trà',
+      name: 'Trà Sen Vàng',
+      description: 'Trà ô long thanh mát kết hợp hạt sen thơm bùi và lớp kem mềm mịn',
+      basePrice: 55000,
+      image: 'https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=300&h=300&fit=crop',
+      isAvailable: true,
+      totalSold: 1200,
+      optionGroups: [
+        {
+          id: 'og4', name: 'Chọn size', required: true, maxSelect: 1,
+          options: [
+            { id: 'o9', name: 'Size S', extraPrice: 0 },
+            { id: 'o10', name: 'Size L', extraPrice: 10000 },
+          ],
+        },
+      ],
+    },
+    {
+      id: 'm9',
+      categoryName: 'Trà',
+      name: 'Trà Thạch Đào',
+      description: 'Trà thanh mát với những miếng đào giòn ngọt và thạch đào dai dai',
+      basePrice: 55000,
+      image: 'https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=300&h=300&fit=crop',
+      isAvailable: true,
+      totalSold: 980,
+      optionGroups: [],
+    },
+    {
+      id: 'm10',
+      categoryName: 'Cà phê Phin',
+      name: 'Phin Sữa Đá',
+      description: 'Cà phê rang xay mộc kết hợp sữa đặc ngọt ngào',
+      basePrice: 35000,
+      image: 'https://images.unsplash.com/photo-1578314675249-a6910f80cc4e?w=300&h=300&fit=crop',
+      isAvailable: true,
+      totalSold: 2500,
+      optionGroups: [],
+    },
+    {
+      id: 'm11',
+      categoryName: 'Bánh ngọt',
+      name: 'Bánh Mì Chà Bông Phô Mai',
+      description: 'Bánh mì mềm kẹp phô mai béo ngậy và chà bông mặn mà',
+      basePrice: 25000,
+      image: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=300&h=300&fit=crop',
+      isAvailable: false,
+      totalSold: 400,
+      optionGroups: [],
+    },
+  ],
 }
 
 // ── Reviews ──

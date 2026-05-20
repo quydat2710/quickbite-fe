@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+
+
 /* ============================================
    QuickBite Design System v4 — Responsive & Balanced
    ============================================ */
@@ -76,8 +78,101 @@
 }
 
 /* ============================================
+   Tailwind v4 — Permanent Safelist (Anti-Purge)
+
+   These classes use opacity modifiers (e.g. bg-primary/10) or are
+   dynamically composed, so Tailwind v4 cannot detect them via static
+   scanning. Declaring them in @layer utilities ensures they are ALWAYS
+   included in the compiled CSS bundle.
+   ============================================ */
+@layer utilities {
+  /* ── Background + opacity ── */
+  .bg-primary\/5      { background-color: rgba(220, 38, 38, 0.05); }
+  .bg-primary\/10     { background-color: rgba(220, 38, 38, 0.10); }
+  .bg-primary\/20     { background-color: rgba(220, 38, 38, 0.20); }
+  .bg-primary\/30     { background-color: rgba(220, 38, 38, 0.30); }
+  .bg-success\/5      { background-color: rgba(22, 163, 74, 0.05); }
+  .bg-success\/10     { background-color: rgba(22, 163, 74, 0.10); }
+  .bg-success\/20     { background-color: rgba(22, 163, 74, 0.20); }
+  .bg-warning\/5      { background-color: rgba(217, 119, 6, 0.05); }
+  .bg-warning\/10     { background-color: rgba(217, 119, 6, 0.10); }
+  .bg-error\/5        { background-color: rgba(239, 68, 68, 0.05); }
+  .bg-error\/10       { background-color: rgba(239, 68, 68, 0.10); }
+  .bg-info\/5         { background-color: rgba(37, 99, 235, 0.05); }
+  .bg-info\/10        { background-color: rgba(37, 99, 235, 0.10); }
+  .bg-blue-500\/10    { background-color: rgba(59, 130, 246, 0.10); }
+  .bg-blue-500\/20    { background-color: rgba(59, 130, 246, 0.20); }
+  .bg-orange-500\/10  { background-color: rgba(249, 115, 22, 0.10); }
+  .bg-orange-500\/20  { background-color: rgba(249, 115, 22, 0.20); }
+  .bg-pink-500\/10    { background-color: rgba(236, 72, 153, 0.10); }
+  .bg-surface-active\/30 { background-color: rgba(243, 244, 246, 0.30); }
+  .bg-surface-active\/50 { background-color: rgba(243, 244, 246, 0.50); }
+  .bg-surface-active\/70 { background-color: rgba(243, 244, 246, 0.70); }
+
+  /* ── Border + opacity ── */
+  .border-primary\/10  { border-color: rgba(220, 38, 38, 0.10); }
+  .border-primary\/20  { border-color: rgba(220, 38, 38, 0.20); }
+  .border-primary\/30  { border-color: rgba(220, 38, 38, 0.30); }
+  .border-primary\/40  { border-color: rgba(220, 38, 38, 0.40); }
+  .border-primary\/50  { border-color: rgba(220, 38, 38, 0.50); }
+  .border-divider\/50  { border-color: rgba(243, 244, 246, 0.50); }
+  .border-divider\/80  { border-color: rgba(243, 244, 246, 0.80); }
+  .border-success\/30  { border-color: rgba(22, 163, 74, 0.30); }
+
+  /* ── Text + opacity ── */
+  .text-primary\/70   { color: rgba(220, 38, 38, 0.70); }
+  .text-primary\/80   { color: rgba(220, 38, 38, 0.80); }
+
+  /* ── Shadows ── */
+  .shadow-xs  { box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
+  .shadow-sm  { box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04); }
+  .shadow-md  { box-shadow: 0 4px 6px -1px rgba(0,0,0,0.07), 0 2px 4px -2px rgba(0,0,0,0.05); }
+  .shadow-lg  { box-shadow: 0 10px 15px -3px rgba(0,0,0,0.08), 0 4px 6px -4px rgba(0,0,0,0.04); }
+  .shadow-xl  { box-shadow: 0 20px 25px -5px rgba(0,0,0,0.08), 0 8px 10px -6px rgba(0,0,0,0.04); }
+  .shadow-primary\/20 { box-shadow: 0 4px 14px rgba(220, 38, 38, 0.20); }
+  .shadow-primary\/30 { box-shadow: 0 6px 20px rgba(220, 38, 38, 0.30); }
+  .hover\:shadow-sm:hover { box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04); }
+  .hover\:shadow-md:hover { box-shadow: 0 4px 6px -1px rgba(0,0,0,0.07), 0 2px 4px -2px rgba(0,0,0,0.05); }
+  .hover\:shadow-lg:hover { box-shadow: 0 10px 15px -3px rgba(0,0,0,0.08), 0 4px 6px -4px rgba(0,0,0,0.04); }
+
+  /* ── Ring ── */
+  .ring-1 { box-shadow: 0 0 0 1px var(--qb-ring-color, rgba(220,38,38,0.25)); }
+  .ring-2 { box-shadow: 0 0 0 2px var(--qb-ring-color, rgba(220,38,38,0.25)); }
+  .ring-primary\/10 { --qb-ring-color: rgba(220, 38, 38, 0.10); }
+  .ring-primary\/20 { --qb-ring-color: rgba(220, 38, 38, 0.20); }
+  .ring-primary\/30 { --qb-ring-color: rgba(220, 38, 38, 0.30); }
+
+  /* ── Hover utilities ── */
+  .hover\:bg-primary\/5:hover    { background-color: rgba(220, 38, 38, 0.05); }
+  .hover\:bg-primary\/10:hover   { background-color: rgba(220, 38, 38, 0.10); }
+  .hover\:border-primary\/20:hover { border-color: rgba(220, 38, 38, 0.20); }
+  .hover\:border-primary\/30:hover { border-color: rgba(220, 38, 38, 0.30); }
+  .hover\:text-primary:hover     { color: #DC2626; }
+  .hover\:bg-surface-active\/30:hover { background-color: rgba(243, 244, 246, 0.30); }
+  .hover\:bg-surface-active\/50:hover { background-color: rgba(243, 244, 246, 0.50); }
+
+  /* ── Focus utilities ── */
+  .focus\:ring-2:focus            { box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.25); }
+  .focus\:ring-primary\/20:focus  { box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.20); }
+  .focus\:border-primary:focus    { border-color: #DC2626; }
+
+  /* ── Active scale ── */
+  .active\:scale-95:active        { transform: scale(0.95); }
+  .active\:scale-\[0\.98\]:active { transform: scale(0.98); }
+
+  /* ── Gradient helpers ── */
+  .from-primary   { --tw-gradient-from: #DC2626 var(--tw-gradient-from-position,); }
+  .to-orange-500  { --tw-gradient-to:   #F97316 var(--tw-gradient-to-position,); }
+  .from-success   { --tw-gradient-from: #16A34A var(--tw-gradient-from-position,); }
+  .to-emerald-300 { --tw-gradient-to:   #6EE7B7 var(--tw-gradient-to-position,); }
+  .to-emerald-400 { --tw-gradient-to:   #34D399 var(--tw-gradient-to-position,); }
+  .to-emerald-500 { --tw-gradient-to:   #10B981 var(--tw-gradient-to-position,); }
+}
+
+/* ============================================
    Base Styles — Balanced Typography
    ============================================ */
+
 
 *,
 *::before,
@@ -641,4 +736,16 @@ section+section {
   font-feature-settings: 'tnum';
   font-weight: 700;
   letter-spacing: -0.01em;
+}
+
+/* ============================================
+   Checkout Page — 2-Column Responsive Grid
+   ============================================ */
+
+@media (min-width: 1024px) {
+  .checkout-grid {
+    grid-template-columns: 1fr 380px !important;
+    gap: 28px !important;
+    align-items: start;
+  }
 }

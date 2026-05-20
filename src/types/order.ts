@@ -18,8 +18,10 @@ export interface OrderItem {
 
 export interface Order {
   id: string
+  orderCode: string
   restaurantId: string
   restaurantName: string
+  restaurantImage?: string
   status: OrderStatus
   items: OrderItem[]
   subtotal: number

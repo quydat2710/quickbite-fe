@@ -1,25 +1,50 @@
-import { useParams, NavLink } from 'react-router-dom'
-import { useState } from 'react'
+import { useParams, NavLink, Link } from 'react-router-dom'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import {
-  ArrowLeft, Star, Clock, MapPin, Phone, Share2,
-  Heart, Plus, ShoppingBasket, Check, Store,
+  Star, Clock, MapPin, Phone, Plus, ShoppingBasket, Check, Store,
+  ChevronRight, CalendarDays, ChevronDown, X, Minus, Loader2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatPrice } from '@/lib/utils'
-import { mockRestaurants, mockMenuItems, mockReviews } from '@/data/mock'
-import type { MenuItem, MenuItemOptionGroup } from '@/data/mock'
+import { restaurantApi } from '@/services/api'
+import type { MenuItem as ApiMenuItem, MenuItemOptionGroup } from '@/types/api.types'
 import { useCartStore } from '@/stores'
 import { Modal } from '@/components/ui/Modal'
-import { QuantityStepper } from '@/components/ui/QuantityStepper'
 import { Button } from '@/components/ui/Button'
+
+// Re-export local type alias for compatibility with rest of file
+type MenuItem = ApiMenuItem
 
 export default function RestaurantDetailPage() {
   const { id } = useParams<{ id: string }>()
-  const restaurant = mockRestaurants.find((r) => r.id === id)
-  const menuItems = mockMenuItems[id || ''] || []
-  const reviews = mockReviews[id || ''] || []
-  const [liked, setLiked] = useState(false)
-  const [activeTab, setActiveTab] = useState('menu')
+
+  // ── API state ──
+  const [restaurant, setRestaurant] = useState<any>(null)
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([])
+  const [reviews, setReviews] = useState<any[]>([])
+  const [isPageLoading, setIsPageLoading] = useState(true)
+
+  // Fetch data from API
+  useEffect(() => {
+    if (!id) return
+    setIsPageLoading(true)
+
+    Promise.all([
+      restaurantApi.getById(id).catch(() => null),
+      restaurantApi.getMenu(id).catch(() => []),
+      restaurantApi.getReviews(id).catch(() => ({ data: [] })),
+    ]).then(([rest, menu, rev]) => {
+      setRestaurant(rest)
+      setMenuItems(menu || [])
+      setReviews((rev as any)?.data || [])
+      setIsPageLoading(false)
+    })
+  }, [id])
+
+  // UI state
+  const [activeCategory, setActiveCategory] = useState('')
+  const [showInfoModal, setShowInfoModal] = useState(false)
+  const [isScrollSpyEnabled, setIsScrollSpyEnabled] = useState(true)
 
   // Menu item modal state
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null)
@@ -27,16 +52,32 @@ export default function RestaurantDetailPage() {
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string[]>>({})
   const [itemNotes, setItemNotes] = useState('')
 
+  // Cart
   const addItem = useCartStore((s) => s.addItem)
   const cartRestaurantId = useCartStore((s) => s.restaurantId)
   const getItemCount = useCartStore((s) => s.getItemCount)
+
+  // Refs for ScrollSpy
+  const categoryRefs = useRef<Record<string, HTMLDivElement | null>>({})
+  const navRef = useRef<HTMLDivElement>(null)
+
+  if (isPageLoading) {
+    return (
+      <div className="page-enter min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-red-500 mx-auto mb-3" />
+          <p className="text-gray-500 text-sm font-medium">Đang tải nhà hàng...</p>
+        </div>
+      </div>
+    )
+  }
 
   if (!restaurant) {
     return (
       <div className="page-enter min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <h2 className="mb-1.5">Không tìm thấy nhà hàng</h2>
-          <NavLink to="/" className="text-primary font-medium text-[13px] hover:underline">Quay lại trang chủ</NavLink>
+          <h2 className="mb-1.5 text-xl font-bold text-gray-900">Không tìm thấy nhà hàng</h2>
+          <NavLink to="/" className="text-red-500 font-medium text-sm hover:underline">Quay lại trang chủ</NavLink>
         </div>
       </div>
     )
@@ -49,6 +90,61 @@ export default function RestaurantDetailPage() {
     return acc
   }, {})
 
+  const categoryNames = Object.keys(menuCategories)
+
+  // Set initial active category
+  useEffect(() => {
+    if (categoryNames.length > 0 && !activeCategory) {
+      setActiveCategory(categoryNames[0])
+    }
+  }, [categoryNames, activeCategory])
+
+  // ── ScrollSpy: observe category sections ──
+  useEffect(() => {
+    if (!isScrollSpyEnabled) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            const catName = entry.target.getAttribute('data-category')
+            if (catName) {
+              setActiveCategory(catName)
+              // Scroll the nav tab into view
+              const navTab = document.getElementById(`nav-tab-${catName}`)
+              if (navTab && navRef.current) {
+                navTab.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' })
+              }
+            }
+          }
+        }
+      },
+      { rootMargin: '-120px 0px -60% 0px', threshold: 0.1 }
+    )
+
+    Object.values(categoryRefs.current).forEach((el) => {
+      if (el) observer.observe(el)
+    })
+
+    return () => observer.disconnect()
+  }, [categoryNames, isScrollSpyEnabled])
+
+  const scrollToCategory = (catName: string) => {
+    setIsScrollSpyEnabled(false)
+    setActiveCategory(catName)
+
+    const el = categoryRefs.current[catName]
+    if (el) {
+      const yOffset = -130 // sticky header height
+      const y = el.getBoundingClientRect().top + window.pageYOffset + yOffset
+      window.scrollTo({ top: y, behavior: 'smooth' })
+    }
+
+    // Re-enable ScrollSpy after scroll finishes
+    setTimeout(() => setIsScrollSpyEnabled(true), 800)
+  }
+
+  // ── Item Modal Logic ──
   const openItemModal = (item: MenuItem) => {
     setSelectedItem(item)
     setItemQuantity(1)
@@ -114,319 +210,452 @@ export default function RestaurantDetailPage() {
   }
 
   const itemCount = getItemCount()
-
-  // Generate initials for logo placeholder
-  const initials = restaurant.name
-    .split(' ')
-    .slice(0, 2)
-    .map((w) => w[0])
-    .join('')
-    .toUpperCase()
+  const avgRating = reviews.length > 0
+    ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1)
+    : restaurant.rating.toFixed(1)
 
   return (
-    <div className="page-enter min-h-screen bg-gray-50">
-      {/* Cover Image */}
-      <div className="relative h-[200px] md:h-[280px] overflow-hidden">
-        <img
-          src={restaurant.coverImage}
-          alt={restaurant.name}
-          className="w-full h-full object-cover"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
+    <div style={{ width: '100%', minHeight: '100vh', background: '#fff' }}>
+      <style>{`
+        .rdp-sticky-header {
+          position: sticky;
+          top: 0;
+          z-index: 30;
+          background: #fff;
+        }
+        @media (min-width: 768px) {
+          .rdp-sticky-header { top: 68px; }
+        }
+        .rdp-cat-nav::-webkit-scrollbar { display: none; }
+        .rdp-cat-nav { -ms-overflow-style: none; scrollbar-width: none; }
+        .rdp-cat-btn { transition: color 0.15s; }
+        .rdp-cat-btn:hover { color: #111827; }
+      `}</style>
 
-        {/* Top actions */}
-        <div className="absolute top-3 left-3 right-3 flex items-center justify-between z-10">
-          <NavLink
-            to="/"
-            className="h-10 w-10 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center hover:bg-black/50 transition-colors"
+      {/* ═══════ STICKY HEADER (breadcrumb + info + delivery + category nav) ═══════ */}
+      <div className="rdp-sticky-header" style={{ boxShadow: '0 1px 0 #f3f4f6' }}>
+        {/* Breadcrumbs */}
+        <div style={{ maxWidth: 1120, margin: '0 auto', padding: '12px 20px 0' }}>
+          <nav style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#9ca3af' }}>
+            <Link to="/" style={{ color: '#9ca3af', fontWeight: 500, transition: 'color 0.15s' }}
+              onMouseEnter={e => (e.currentTarget.style.color = '#ef4444')}
+              onMouseLeave={e => (e.currentTarget.style.color = '#9ca3af')}>
+              Trang chủ
+            </Link>
+            <ChevronRight style={{ width: 14, height: 14 }} />
+            <span style={{ color: '#6b7280', fontWeight: 500 }}>Nhà hàng</span>
+            <ChevronRight style={{ width: 14, height: 14 }} />
+            <span style={{ color: '#111827', fontWeight: 600 }}>{restaurant.name}</span>
+          </nav>
+        </div>
+
+        {/* Restaurant info */}
+        <div style={{ maxWidth: 1120, margin: '0 auto', padding: '12px 20px 0' }}>
+          <h1 style={{ fontSize: 22, fontWeight: 800, color: '#111827', margin: 0, letterSpacing: '-0.02em' }}>{restaurant.name}</h1>
+
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '8px 16px', marginTop: 8 }}>
+            <button
+              onClick={() => setShowInfoModal(true)}
+              style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: '#6b7280', fontSize: 13 }}
+            >
+              <Star style={{ width: 15, height: 15, color: '#fbbf24', fill: '#fbbf24' }} />
+              <span style={{ fontWeight: 700, color: '#111827' }}>{avgRating}</span>
+              <span style={{ color: '#9ca3af' }}>({reviews.length} đánh giá)</span>
+            </button>
+            <span style={{ color: '#d1d5db' }}>•</span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13, color: '#6b7280' }}>
+              <Clock style={{ width: 14, height: 14, color: '#9ca3af' }} />
+              <span style={{ fontWeight: 500 }}>{restaurant.deliveryTime}</span>
+            </span>
+            <span style={{ color: '#d1d5db' }}>•</span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13, color: '#6b7280' }}>
+              <MapPin style={{ width: 14, height: 14, color: '#9ca3af' }} />
+              <span style={{ fontWeight: 500 }}>{restaurant.distance}km</span>
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6, fontSize: 13, color: '#6b7280' }}>
+            <span>Giờ mở cửa</span>
+            <span style={{ fontWeight: 600, color: '#374151' }}>Hôm nay {restaurant.openTime} - {restaurant.closeTime}</span>
+          </div>
+
+          {/* Delivery dropdowns */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 12, marginBottom: 12 }}>
+            <button style={{
+              display: 'flex', alignItems: 'center', gap: 8,
+              padding: '8px 14px', borderRadius: 10,
+              border: '1px solid #e5e7eb', background: '#f9fafb',
+              fontSize: 13, fontWeight: 500, color: '#374151',
+              cursor: 'pointer', minWidth: 190,
+            }}>
+              <CalendarDays style={{ width: 15, height: 15, color: '#9ca3af', flexShrink: 0 }} />
+              <span>Ngày giao hàng: <strong style={{ color: '#ef4444' }}>Hôm nay</strong></span>
+              <ChevronDown style={{ width: 14, height: 14, color: '#9ca3af', marginLeft: 'auto', flexShrink: 0 }} />
+            </button>
+            <button style={{
+              display: 'flex', alignItems: 'center', gap: 8,
+              padding: '8px 14px', borderRadius: 10,
+              border: '1px solid #e5e7eb', background: '#f9fafb',
+              fontSize: 13, fontWeight: 500, color: '#374151',
+              cursor: 'pointer', minWidth: 210,
+            }}>
+              <Clock style={{ width: 15, height: 15, color: '#9ca3af', flexShrink: 0 }} />
+              <span>Thời gian giao: <strong style={{ color: '#ef4444' }}>Ngay bây giờ</strong></span>
+              <ChevronDown style={{ width: 14, height: 14, color: '#9ca3af', marginLeft: 'auto', flexShrink: 0 }} />
+            </button>
+          </div>
+        </div>
+
+        {/* Category nav tabs */}
+        <div style={{ maxWidth: 1120, margin: '0 auto', padding: '0 20px' }}>
+          <div
+            ref={navRef}
+            className="rdp-cat-nav"
+            style={{ display: 'flex', alignItems: 'center', overflowX: 'auto' }}
           >
-            <ArrowLeft className="h-5 w-5 text-white" />
-          </NavLink>
-          <div className="flex gap-2">
-            <button className="h-10 w-10 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center hover:bg-black/50 transition-colors">
-              <Share2 className="h-4.5 w-4.5 text-white" />
-            </button>
-            <button
-              onClick={() => setLiked(!liked)}
-              className="h-10 w-10 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center hover:bg-black/50 transition-colors"
-            >
-              <Heart className={cn('h-4.5 w-4.5 transition-colors', liked ? 'fill-red-500 text-red-500' : 'text-white')} />
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Restaurant Info Card */}
-      <div className="container -mt-16 relative z-10">
-        <div className="bg-white rounded-2xl shadow-lg p-5 md:p-6 border border-gray-100/50">
-          <div className="flex items-start gap-4">
-            {/* Logo / Avatar */}
-            <div className="shrink-0">
-              {restaurant.logo ? (
-                <img
-                  src={restaurant.logo}
-                  alt={restaurant.name}
-                  className="h-14 w-14 md:h-16 md:w-16 rounded-xl object-cover border border-gray-100 shadow-sm"
-                />
-              ) : (
-                <div className="h-14 w-14 md:h-16 md:w-16 rounded-xl bg-gradient-to-br from-primary to-red-400 flex items-center justify-center shadow-sm">
-                  <span className="text-white text-lg md:text-xl font-bold">{initials}</span>
-                </div>
-              )}
-            </div>
-
-            {/* Info */}
-            <div className="flex-1 min-w-0">
-              <div className="flex items-start justify-between gap-2">
-                <h1 className="text-lg md:text-xl font-extrabold text-gray-900 line-clamp-1 tracking-[-0.01em]">
-                  {restaurant.name}
-                </h1>
-                <div className="flex items-center gap-1 bg-amber-50 px-2.5 py-1 rounded-full shrink-0 border border-amber-100">
-                  <Star className="h-3.5 w-3.5 text-amber-400 fill-amber-400" />
-                  <span className="text-[13px] font-extrabold text-amber-600">{restaurant.rating.toFixed(1)}</span>
-                </div>
-              </div>
-              <p className="text-[13px] text-gray-500 mt-1 line-clamp-2 leading-relaxed">{restaurant.description}</p>
-
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 mt-3 text-[13px] text-gray-400">
-                <div className="flex items-center gap-1">
-                  <Clock className="h-3.5 w-3.5" />
-                  <span className="font-medium">{restaurant.deliveryTime}</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <MapPin className="h-3.5 w-3.5" />
-                  <span className="font-medium">{restaurant.distance}km</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Phone className="h-3.5 w-3.5" />
-                  <span className="font-medium">{restaurant.phone}</span>
-                </div>
-              </div>
-
-              {/* Category chips */}
-              <div className="flex gap-1.5 mt-3">
-                {restaurant.categories.map((cat) => (
-                  <span key={cat} className="text-[11px] px-2.5 py-1 bg-gray-50 border border-gray-100 rounded-full text-gray-500 font-semibold">
-                    {cat}
-                  </span>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Tabs */}
-      <div className="container mt-5">
-        <div className="flex gap-1 bg-gray-100 rounded-xl p-1">
-          {[
-            { id: 'menu', label: 'Thực đơn' },
-            { id: 'reviews', label: `Đánh giá (${reviews.length})` },
-            { id: 'info', label: 'Thông tin' },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={cn(
-                'flex-1 px-4 py-2.5 text-[13px] font-semibold transition-all rounded-lg',
-                activeTab === tab.id
-                  ? 'bg-white text-gray-900 shadow-sm'
-                  : 'text-gray-500 hover:text-gray-700'
-              )}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Tab Content */}
-      <div className="container py-5 pb-28">
-        {/* Menu Tab */}
-        {activeTab === 'menu' && (
-          <div className="space-y-6">
-            {Object.entries(menuCategories).map(([catName, items]) => (
-              <div key={catName}>
-                <h3 className="font-bold text-base text-gray-900 mb-3 flex items-center gap-2">
-                  <Store className="h-4 w-4 text-primary" />
+            {categoryNames.map((catName) => {
+              const isActive = activeCategory === catName
+              return (
+                <button
+                  key={catName}
+                  id={`nav-tab-${catName}`}
+                  onClick={() => scrollToCategory(catName)}
+                  className="rdp-cat-btn"
+                  style={{
+                    position: 'relative',
+                    padding: '12px 20px',
+                    fontSize: 14,
+                    fontWeight: 600,
+                    whiteSpace: 'nowrap',
+                    flexShrink: 0,
+                    border: 'none',
+                    background: 'none',
+                    cursor: 'pointer',
+                    color: isActive ? '#ef4444' : '#6b7280',
+                    borderBottom: isActive ? '2.5px solid #ef4444' : '2.5px solid transparent',
+                    transition: 'color 0.15s, border-color 0.15s',
+                  }}
+                >
                   {catName}
-                </h3>
-                <div className="space-y-2.5">
-                  {items.map((item) => (
-                    <button
-                      key={item.id}
-                      onClick={() => item.isAvailable && openItemModal(item)}
-                      disabled={!item.isAvailable}
-                      className={cn(
-                        'w-full flex gap-4 p-4 bg-white rounded-xl text-left transition-all duration-200 border border-gray-100/60',
-                        item.isAvailable
-                          ? 'hover:shadow-md hover:-translate-y-0.5 hover:border-gray-200 cursor-pointer'
-                          : 'opacity-50 cursor-not-allowed'
-                      )}
-                    >
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-bold text-[14px] text-gray-900 line-clamp-1">{item.name}</h4>
-                        <p className="text-[12px] text-gray-400 mt-1 line-clamp-2 leading-relaxed">{item.description}</p>
-                        <div className="flex items-center gap-3 mt-2.5">
-                          <span className="text-[14px] font-extrabold text-primary">{formatPrice(item.basePrice)}</span>
-                          <span className="text-[11px] text-gray-300 font-medium">Đã bán {item.totalSold}</span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* ═══════ MENU CONTENT ═══════ */}
+      <div style={{ maxWidth: 1120, margin: '0 auto', padding: '28px 20px 120px' }}>
+        {categoryNames.map((catName) => (
+          <div
+            key={catName}
+            ref={(el) => { categoryRefs.current[catName] = el }}
+            data-category={catName}
+            style={{ marginBottom: 48 }}
+          >
+            <h2 style={{ fontSize: 20, fontWeight: 800, color: '#111827', marginBottom: 20 }}>
+              {catName}
+            </h2>
+
+            {/* Responsive grid via CSS columns */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+              gap: 16,
+            }}>
+              {menuCategories[catName].map((item) => (
+                <button
+                  key={item.id}
+                  onClick={() => item.isAvailable && openItemModal(item)}
+                  disabled={!item.isAvailable}
+                  style={{
+                    width: '100%',
+                    display: 'flex',
+                    gap: 16,
+                    padding: 16,
+                    background: '#fff',
+                    borderRadius: 14,
+                    border: '1px solid #f3f4f6',
+                    textAlign: 'left',
+                    cursor: item.isAvailable ? 'pointer' : 'not-allowed',
+                    opacity: item.isAvailable ? 1 : 0.5,
+                    transition: 'box-shadow 0.2s, border-color 0.2s',
+                  }}
+                  onMouseEnter={e => {
+                    if (item.isAvailable) {
+                      e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.08)'
+                      e.currentTarget.style.borderColor = '#e5e7eb'
+                    }
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.boxShadow = 'none'
+                    e.currentTarget.style.borderColor = '#f3f4f6'
+                  }}
+                >
+                  {/* Image */}
+                  <div style={{ position: 'relative', width: 96, height: 96, borderRadius: 10, overflow: 'hidden', background: '#f3f4f6', flexShrink: 0 }}>
+                    <img src={item.image} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    {!item.isAvailable && (
+                      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <span style={{ fontSize: 10, fontWeight: 700, color: '#fff', background: '#ef4444', padding: '2px 8px', borderRadius: 9999 }}>Hết</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Info */}
+                  <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '2px 0' }}>
+                    <div>
+                      <h4 style={{ fontWeight: 700, fontSize: 15, color: '#111827', margin: '0 0 4px', lineHeight: 1.3, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.name}</h4>
+                      <p style={{ fontSize: 12, color: '#9ca3af', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.description}</p>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
+                      <span style={{ fontSize: 15, fontWeight: 700, color: '#111827' }}>{formatPrice(item.basePrice)}</span>
+                      {item.isAvailable && (
+                        <div style={{
+                          width: 32, height: 32, borderRadius: '50%',
+                          background: '#fef2f2', border: '1px solid #fecaca',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          color: '#ef4444', flexShrink: 0, transition: 'background 0.15s, color 0.15s',
+                        }}>
+                          <Plus style={{ width: 16, height: 16 }} />
                         </div>
-                        {!item.isAvailable && (
-                          <span className="inline-block mt-1.5 text-[11px] font-bold text-red-500 bg-red-50 px-2 py-0.5 rounded-full">Hết món</span>
-                        )}
-                      </div>
-                      <div className="relative h-20 w-20 rounded-xl overflow-hidden bg-gray-100 shrink-0">
-                        <img src={item.image} alt={item.name} className="h-full w-full object-cover" />
-                        {item.isAvailable && (
-                          <div className="absolute -bottom-0.5 -right-0.5 h-7 w-7 bg-primary rounded-tl-xl rounded-br-xl flex items-center justify-center shadow-sm">
-                            <Plus className="h-4 w-4 text-white" />
-                          </div>
-                        )}
-                      </div>
-                    </button>
-                  ))}
+                      )}
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* ═══════ FLOATING CART BAR ═══════ */}
+      {itemCount > 0 && cartRestaurantId === restaurant.id && (
+        <div style={{
+          position: 'fixed',
+          bottom: 24,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 50,
+          width: 'calc(100% - 32px)',
+          maxWidth: 480,
+        }}>
+          <NavLink
+            to="/cart"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+              color: '#fff',
+              borderRadius: 18,
+              padding: '14px 16px',
+              boxShadow: '0 8px 32px rgba(239,68,68,0.45), 0 2px 8px rgba(0,0,0,0.15)',
+              textDecoration: 'none',
+              border: '1px solid rgba(255,255,255,0.15)',
+            }}
+          >
+            {/* Left: icon + text */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              {/* Icon container */}
+              <div style={{
+                width: 38, height: 38,
+                background: 'rgba(255,255,255,0.2)',
+                backdropFilter: 'blur(8px)',
+                borderRadius: 12,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                flexShrink: 0,
+                position: 'relative',
+              }}>
+                <ShoppingBasket style={{ width: 20, height: 20, color: '#fff' }} />
+                {/* Count badge */}
+                <div style={{
+                  position: 'absolute',
+                  top: -6, right: -6,
+                  width: 18, height: 18,
+                  background: '#fff',
+                  borderRadius: '50%',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 10, fontWeight: 800, color: '#ef4444',
+                  boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
+                }}>
+                  {itemCount}
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: '#fff', lineHeight: 1.2 }}>
+                  {itemCount} món trong giỏ
+                </div>
+                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.75)', marginTop: 1 }}>
+                  Nhấn để xem chi tiết
+                </div>
+              </div>
+            </div>
+
+            {/* Right: CTA button */}
+            <div style={{
+              background: 'rgba(255,255,255,0.18)',
+              border: '1px solid rgba(255,255,255,0.25)',
+              borderRadius: 12,
+              padding: '8px 16px',
+              fontSize: 13,
+              fontWeight: 700,
+              color: '#fff',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 4,
+              flexShrink: 0,
+              backdropFilter: 'blur(4px)',
+            }}>
+              Xem giỏ →
+            </div>
+          </NavLink>
+        </div>
+      )}
+
+      {/* ═══════ INFO & REVIEWS MODAL ═══════ */}
+      <Modal
+        isOpen={showInfoModal}
+        onClose={() => setShowInfoModal(false)}
+        title={restaurant.name}
+        size="lg"
+      >
+        <div className="space-y-6">
+          {/* Restaurant Info Section */}
+          <div className="space-y-3">
+            <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Thông tin nhà hàng</h4>
+            {[
+              { label: 'Địa chỉ', value: restaurant.address, icon: MapPin },
+              { label: 'Giờ mở cửa', value: `${restaurant.openTime} - ${restaurant.closeTime}`, icon: Clock },
+              { label: 'Điện thoại', value: restaurant.phone, icon: Phone },
+            ].map(({ label, value, icon: Icon }) => (
+              <div key={label} className="flex items-center gap-3">
+                <div className="h-9 w-9 rounded-lg bg-gray-50 flex items-center justify-center shrink-0">
+                  <Icon className="h-4 w-4 text-gray-400" />
+                </div>
+                <div>
+                  <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">{label}</p>
+                  <p className="text-sm text-gray-700 font-medium">{value}</p>
                 </div>
               </div>
             ))}
+            <p className="text-sm text-gray-500 leading-relaxed pt-2 border-t border-gray-100">{restaurant.description}</p>
           </div>
-        )}
 
-        {/* Reviews Tab */}
-        {activeTab === 'reviews' && (
+          {/* Reviews Section */}
           <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Đánh giá ({reviews.length})</h4>
+              <div className="flex items-center gap-1">
+                <Star className="h-4 w-4 text-amber-400 fill-amber-400" />
+                <span className="text-sm font-bold text-gray-900">{avgRating}</span>
+              </div>
+            </div>
+
             {reviews.length === 0 ? (
-              <div className="text-center py-12">
+              <div className="text-center py-8">
                 <Star className="h-10 w-10 text-gray-200 mx-auto mb-3" />
-                <p className="text-gray-400 text-[14px] font-medium">Chưa có đánh giá nào</p>
+                <p className="text-gray-400 text-sm font-medium">Chưa có đánh giá nào</p>
               </div>
             ) : (
               reviews.map((review) => (
-                <div key={review.id} className="bg-white rounded-xl p-4 border border-gray-100/60">
+                <div key={review.id} className="bg-gray-50 rounded-xl p-4">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="h-9 w-9 rounded-full bg-gradient-to-br from-primary to-red-400 flex items-center justify-center text-white text-[12px] font-bold">
+                    <div className="flex items-center gap-2.5">
+                      <div className="h-8 w-8 rounded-full bg-gradient-to-br from-red-400 to-red-500 flex items-center justify-center text-white text-xs font-bold">
                         {review.customerName[0]}
                       </div>
                       <div>
-                        <p className="text-[14px] font-bold text-gray-900">{review.customerName}</p>
+                        <p className="text-sm font-bold text-gray-900">{review.customerName}</p>
                         <p className="text-[11px] text-gray-400">{review.createdAt}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-0.5">
                       {Array.from({ length: 5 }).map((_, i) => (
-                        <Star key={i} className={cn('h-3.5 w-3.5', i < review.rating ? 'text-amber-400 fill-amber-400' : 'text-gray-200')} />
+                        <Star key={i} className={cn('h-3 w-3', i < review.rating ? 'text-amber-400 fill-amber-400' : 'text-gray-200')} />
                       ))}
                     </div>
                   </div>
-                  <p className="text-[13px] text-gray-600 mt-3 leading-relaxed">{review.comment}</p>
+                  <p className="text-sm text-gray-600 mt-2.5 leading-relaxed">{review.comment}</p>
                   {review.reply && (
-                    <div className="mt-3 pl-3 border-l-2 border-primary/20 bg-primary/[0.03] rounded-r-lg py-2 pr-3">
-                      <p className="text-[11px] font-bold text-primary mb-0.5">Phản hồi từ nhà hàng</p>
-                      <p className="text-[13px] text-gray-600">{review.reply}</p>
+                    <div className="mt-2.5 pl-3 border-l-2 border-red-200 bg-red-50/50 rounded-r-lg py-2 pr-3">
+                      <p className="text-[11px] font-bold text-red-500 mb-0.5">Phản hồi từ nhà hàng</p>
+                      <p className="text-sm text-gray-600">{review.reply}</p>
                     </div>
                   )}
                 </div>
               ))
             )}
           </div>
-        )}
-
-        {/* Info Tab */}
-        {activeTab === 'info' && (
-          <div className="bg-white rounded-xl p-5 space-y-4 border border-gray-100/60">
-            {[
-              { label: 'Địa chỉ', value: restaurant.address, icon: MapPin },
-              { label: 'Giờ mở cửa', value: `${restaurant.openTime} - ${restaurant.closeTime}`, icon: Clock },
-              { label: 'Điện thoại', value: restaurant.phone, icon: Phone },
-            ].map(({ label, value, icon: Icon }) => (
-              <div key={label} className="flex items-start gap-3">
-                <div className="h-9 w-9 rounded-lg bg-gray-50 flex items-center justify-center shrink-0">
-                  <Icon className="h-4 w-4 text-gray-400" />
-                </div>
-                <div>
-                  <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">{label}</p>
-                  <p className="text-[14px] text-gray-700 font-medium mt-0.5">{value}</p>
-                </div>
-              </div>
-            ))}
-            <div className="pt-3 border-t border-gray-100">
-              <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Mô tả</p>
-              <p className="text-[13px] text-gray-500 leading-relaxed">{restaurant.description}</p>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Floating Cart Bar */}
-      {itemCount > 0 && cartRestaurantId === restaurant.id && (
-        <div className="fixed bottom-16 md:bottom-4 left-3 right-3 md:left-auto md:right-4 md:w-[380px] z-40">
-          <NavLink
-            to="/cart"
-            className="bg-primary text-white rounded-2xl px-5 py-3.5 shadow-xl flex items-center justify-between hover:bg-primary-hover transition-all active:scale-[0.98] animate-slide-up border border-white/10"
-          >
-            <div className="flex items-center gap-3">
-              <div className="h-9 w-9 bg-white/20 rounded-xl flex items-center justify-center">
-                <ShoppingBasket className="h-4.5 w-4.5" />
-              </div>
-              <span className="font-bold text-[14px]">{itemCount} món trong giỏ</span>
-            </div>
-            <span className="text-[13px] font-bold bg-white/20 px-3.5 py-1.5 rounded-xl">Xem giỏ</span>
-          </NavLink>
         </div>
-      )}
+      </Modal>
 
-      {/* Item Detail Modal */}
+      {/* ═══════ ITEM DETAIL MODAL ═══════ */}
       <Modal
         isOpen={!!selectedItem}
         onClose={() => setSelectedItem(null)}
         title={selectedItem?.name || ''}
       >
         {selectedItem && (
-          <div className="space-y-4">
-            {/* Item Image */}
-            <div className="relative h-44 rounded-xl overflow-hidden bg-gray-100 -mx-1">
-              <img src={selectedItem.image} alt={selectedItem.name} className="w-full h-full object-cover" />
-            </div>
-
-            <div>
-              <p className="text-[13px] text-gray-500 leading-relaxed">{selectedItem.description}</p>
-              <p className="text-lg font-extrabold text-primary mt-1.5">{formatPrice(selectedItem.basePrice)}</p>
+          <div className="space-y-5">
+            {/* Item Image + Price */}
+            <div className="flex gap-4 items-start">
+              <div className="h-20 w-20 rounded-xl overflow-hidden bg-gray-100 shrink-0">
+                <img src={selectedItem.image} alt={selectedItem.name} className="w-full h-full object-cover" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm text-gray-500 leading-relaxed">{selectedItem.description}</p>
+                <p className="text-lg font-bold text-gray-900 mt-1">{formatPrice(selectedItem.basePrice)}</p>
+              </div>
             </div>
 
             {/* Option Groups */}
             {selectedItem.optionGroups.map((og) => (
-              <div key={og.id}>
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="text-[14px] font-bold text-gray-900">{og.name}</h4>
+              <div key={og.id} className="border-t border-gray-100 pt-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="text-[15px] font-bold text-gray-900">{og.name}</h4>
                   {og.required && (
-                    <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full">Bắt buộc</span>
+                    <span className="text-[11px] font-bold text-red-500 bg-red-50 px-2.5 py-0.5 rounded-full">Chọn 1</span>
                   )}
                 </div>
-                <div className="space-y-2">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {og.options.map((opt) => {
                     const isSelected = (selectedOptions[og.id] || []).includes(opt.id)
                     return (
                       <button
                         key={opt.id}
                         onClick={() => toggleOption(og, opt.id)}
-                        className={cn(
-                          'w-full flex items-center justify-between p-3 rounded-xl border-2 transition-all',
-                          isSelected
-                            ? 'border-primary bg-primary/5'
-                            : 'border-gray-100 hover:border-gray-200'
-                        )}
+                        style={{
+                          width: '100%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          padding: '12px 16px',
+                          borderRadius: 12,
+                          border: isSelected ? '2px solid #fca5a5' : '2px solid #f3f4f6',
+                          background: isSelected ? '#fef2f2' : '#f9fafb',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s',
+                        }}
                       >
-                        <div className="flex items-center gap-3">
-                          <div className={cn(
-                            'h-5 w-5 rounded-full border-2 flex items-center justify-center transition-colors',
-                            isSelected ? 'border-primary bg-primary' : 'border-gray-300'
-                          )}>
-                            {isSelected && <Check className="h-3 w-3 text-white" />}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                          <div style={{
+                            width: 20, height: 20, borderRadius: '50%',
+                            border: `2px solid ${isSelected ? '#ef4444' : '#d1d5db'}`,
+                            background: isSelected ? '#ef4444' : '#fff',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            flexShrink: 0, transition: 'all 0.15s',
+                          }}>
+                            {isSelected && <Check style={{ width: 11, height: 11, color: '#fff' }} />}
                           </div>
-                          <span className="text-[14px] font-medium text-gray-700">{opt.name}</span>
+                          <span style={{ fontSize: 14, fontWeight: 500, color: isSelected ? '#111827' : '#4b5563' }}>
+                            {opt.name}
+                          </span>
                         </div>
                         {opt.extraPrice > 0 && (
-                          <span className="text-[13px] text-gray-400 font-medium">+{formatPrice(opt.extraPrice)}</span>
+                          <span style={{ fontSize: 13, color: '#ef4444', fontWeight: 600 }}>
+                            +{formatPrice(opt.extraPrice)}
+                          </span>
                         )}
                       </button>
                     )
@@ -436,24 +665,85 @@ export default function RestaurantDetailPage() {
             ))}
 
             {/* Notes */}
-            <div>
-              <label className="text-[14px] font-bold text-gray-900 mb-2 block">Ghi chú</label>
+            <div style={{ borderTop: '1px solid #f3f4f6', paddingTop: 16 }}>
+              <label style={{ fontSize: 13, fontWeight: 700, color: '#111827', display: 'block', marginBottom: 8 }}>Ghi chú</label>
               <textarea
                 value={itemNotes}
                 onChange={(e) => setItemNotes(e.target.value)}
                 placeholder="Ít cay, không hành..."
-                className="w-full p-3 text-[14px] bg-gray-50 border border-gray-200 rounded-xl placeholder:text-gray-300 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 resize-none transition-all"
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  fontSize: 13,
+                  background: '#f9fafb',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: 10,
+                  color: '#374151',
+                  resize: 'none',
+                  outline: 'none',
+                  boxSizing: 'border-box',
+                  fontFamily: 'inherit',
+                }}
                 rows={2}
               />
             </div>
 
-            {/* Quantity & Add */}
-            <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-              <QuantityStepper value={itemQuantity} onChange={setItemQuantity} min={1} />
-              <Button onClick={handleAddToCart} size="md" className="gap-2 min-w-[160px] rounded-xl">
-                <span className="font-bold">Thêm</span>
-                <span className="bg-white/20 px-2.5 py-0.5 rounded-lg text-[12px] font-bold">{formatPrice(getItemTotalPrice())}</span>
-              </Button>
+            {/* Quantity & Add to Cart */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: 16, borderTop: '1px solid #f3f4f6' }}>
+              {/* Quantity Stepper */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#f9fafb', borderRadius: 12, padding: '4px 6px', border: '1px solid #f3f4f6' }}>
+                <button
+                  onClick={() => setItemQuantity(Math.max(1, itemQuantity - 1))}
+                  style={{
+                    width: 36, height: 36, borderRadius: 8,
+                    background: '#fff', border: '1px solid #e5e7eb',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    cursor: 'pointer', color: '#374151',
+                  }}
+                >
+                  <Minus style={{ width: 15, height: 15 }} />
+                </button>
+                <span style={{ fontSize: 16, fontWeight: 700, color: '#111827', minWidth: 28, textAlign: 'center' }}>
+                  {itemQuantity}
+                </span>
+                <button
+                  onClick={() => setItemQuantity(itemQuantity + 1)}
+                  style={{
+                    width: 36, height: 36, borderRadius: 8,
+                    background: '#ef4444', border: 'none',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    cursor: 'pointer', color: '#fff',
+                  }}
+                >
+                  <Plus style={{ width: 15, height: 15 }} />
+                </button>
+              </div>
+
+              {/* Add to Cart Button */}
+              <button
+                onClick={handleAddToCart}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 10,
+                  background: '#ef4444', color: '#fff',
+                  border: 'none', borderRadius: 12,
+                  padding: '12px 20px',
+                  fontWeight: 700, fontSize: 14,
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 12px rgba(239,68,68,0.3)',
+                  fontFamily: 'inherit',
+                }}
+              >
+                <span>Thêm vào giỏ</span>
+                <span style={{
+                  background: 'rgba(255,255,255,0.2)',
+                  padding: '3px 10px',
+                  borderRadius: 8,
+                  fontSize: 13,
+                  fontWeight: 600,
+                }}>
+                  {formatPrice(getItemTotalPrice())}
+                </span>
+              </button>
             </div>
           </div>
         )}
